@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>🧊 Aventura Geométrica — Poliedros y Cuerpos Redondos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Fredoka', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    background-size: 400% 400%;
+    animation: bgShift 20s ease infinite;
+    color: #2d2d44;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  @keyframes bgShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Burbujas decorativas de fondo */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(40px);
+    opacity: 0.5;
+  }
+  body::before {
+    width: 300px; height: 300px;
+    background: #fbbf24;
+    top: -80px; left: -80px;
+    animation: float 12s ease-in-out infinite;
+  }
+  body::after {
+    width: 350px; height: 350px;
+    background: #34d399;
+    bottom: -100px; right: -100px;
+    animation: float 15s ease-in-out infinite reverse;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(30px, -30px) scale(1.1); }
+  }
+
+  .app {
+    width: 100%;
+    max-width: 1100px;
+    height: calc(100vh - 24px);
+    max-height: 820px;
+    background: rgba(255,255,255,0.96);
+    border-radius: 28px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25), inset 0 0 0 4px rgba(255,255,255,0.5);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== PANTALLAS ===== */
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    overflow: hidden;
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ===== INICIO ===== */
+  #screen-inicio {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: radial-gradient(circle at center, #fff 0%, #f3f0ff 100%);
+  }
+  .titulo-mega {
+    font-size: clamp(40px, 7vw, 72px);
+    font-weight: 700;
+    line-height: 1;
+    background: linear-gradient(135deg, #ff6b6b 0%, #f7b733 50%, #4ecdc4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+    letter-spacing: -2px;
+    animation: bounce-in 0.8s cubic-bezier(.68,-0.55,.27,1.55);
+  }
+  .subtitulo {
+    font-size: clamp(18px, 2.4vw, 24px);
+    color: #6b5b95;
+    font-weight: 500;
+    margin-bottom: 32px;
+  }
+
+  @keyframes bounce-in {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .figuras-deco {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .figuras-deco svg {
+    width: 70px;
+    height: 70px;
+    animation: spin-slow 8s linear infinite;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+  }
+  .figuras-deco svg:nth-child(2) { animation-duration: 6s; animation-direction: reverse; }
+  .figuras-deco svg:nth-child(3) { animation-duration: 10s; }
+  .figuras-deco svg:nth-child(4) { animation-duration: 7s; animation-direction: reverse; }
+  .figuras-deco svg:nth-child(5) { animation-duration: 9s; }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .input-nombre {
+    width: min(420px, 90%);
+    padding: 18px 24px;
+    font-size: 22px;
+    font-family: 'Fredoka', sans-serif;
+    border: 4px solid #a78bfa;
+    border-radius: 18px;
+    text-align: center;
+    background: #fff;
+    color: #4c1d95;
+    margin-bottom: 24px;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .input-nombre:focus {
+    outline: none;
+    border-color: #f7b733;
+    box-shadow: 0 0 0 6px rgba(247,183,51,0.25);
+    transform: scale(1.02);
+  }
+
+  /* ===== BOTONES ===== */
+  .btn {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    border: none;
+    padding: 18px 40px;
+    font-size: 22px;
+    border-radius: 18px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    color: #fff;
+    min-height: 60px;
+    min-width: 60px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-primario {
+    background: linear-gradient(135deg, #f7b733 0%, #ff6b6b 100%);
+    box-shadow: 0 8px 20px rgba(247,103,103,0.4), inset 0 -4px 0 rgba(0,0,0,0.15);
+  }
+  .btn-primario:hover { box-shadow: 0 12px 28px rgba(247,103,103,0.5), inset 0 -4px 0 rgba(0,0,0,0.15); }
+  .btn-secundario {
+    background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+    box-shadow: 0 8px 20px rgba(78,205,196,0.4), inset 0 -4px 0 rgba(0,0,0,0.15);
+  }
+  .btn-morado {
+    background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+    box-shadow: 0 8px 20px rgba(99,102,241,0.4), inset 0 -4px 0 rgba(0,0,0,0.15);
+  }
+  .btn-pequeño {
+    padding: 12px 22px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  /* ===== MENÚ ===== */
+  #screen-menu {
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+  }
+  .saludo {
+    font-size: 32px;
+    font-weight: 600;
+    color: #4c1d95;
+    text-align: center;
+  }
+  .saludo .nombre-usuario {
+    color: #ec4899;
+  }
+  .menu-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: min(720px, 100%);
+  }
+  .menu-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 28px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 4px solid transparent;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  }
+  .menu-card:hover, .menu-card:active {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.15);
+  }
+  .menu-card.aprende { border-color: #4ecdc4; }
+  .menu-card.juega { border-color: #f7b733; }
+  .menu-card .emoji {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .menu-card h3 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .menu-card.aprende h3 { color: #0d9488; }
+  .menu-card.juega h3 { color: #d97706; }
+  .menu-card p {
+    color: #6b7280;
+    font-size: 16px;
+  }
+
+  /* ===== APRENDE ===== */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+  .topbar h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #4c1d95;
+  }
+  .galeria {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    align-content: start;
+  }
+  .ficha {
+    background: #fff;
+    border-radius: 18px;
+    padding: 14px;
+    text-align: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    border: 3px solid #f3f4f6;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ficha:active { transform: scale(0.97); }
+  .ficha.poliedro { border-color: #ddd6fe; }
+  .ficha.redondo { border-color: #fed7aa; }
+  .ficha svg {
+    width: 100%;
+    height: 110px;
+    margin-bottom: 8px;
+  }
+  .ficha h4 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 6px;
+  }
+  .ficha .tipo {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .tipo.t-prisma { background: #dbeafe; color: #1e40af; }
+  .tipo.t-piramide { background: #fce7f3; color: #9f1239; }
+  .tipo.t-redondo { background: #ffedd5; color: #9a3412; }
+  .ficha .stats {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+  .ficha .stats b { color: #4c1d95; }
+
+  /* ===== JUEGO ===== */
+  .progreso-bar {
+    background: #e5e7eb;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+  .progreso-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ecdc4, #f7b733);
+    transition: width 0.5s ease;
+    border-radius: 999px;
+  }
+  .info-juego {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #4c1d95;
+    flex-shrink: 0;
+  }
+  .puntos-display {
+    background: #fef3c7;
+    padding: 6px 16px;
+    border-radius: 12px;
+    color: #92400e;
+  }
+
+  .pregunta-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+  }
+  .pregunta-texto {
+    font-size: 26px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+  .pregunta-figura {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 20px;
+    animation: rotate-fig 12s linear infinite;
+  }
+  @keyframes rotate-fig {
+    0%, 100% { transform: rotateY(0deg); }
+    50% { transform: rotateY(20deg); }
+  }
+  .opciones {
+    display: grid;
+    gap: 14px;
+    width: min(640px, 100%);
+  }
+  .opciones.cols-2 { grid-template-columns: 1fr 1fr; }
+  .opciones.cols-1 { grid-template-columns: 1fr; }
+  .opcion-btn {
+    background: #fff;
+    border: 4px solid #c4b5fd;
+    padding: 18px 16px;
+    font-size: 20px;
+    font-weight: 600;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #4c1d95;
+    font-family: 'Fredoka', sans-serif;
+    min-height: 64px;
+  }
+  .opcion-btn:hover { background: #f5f3ff; }
+  .opcion-btn:active { transform: scale(0.96); }
+  .opcion-btn.correcto {
+    background: #4ade80 !important;
+    border-color: #16a34a !important;
+    color: #fff !important;
+    animation: shake-good 0.5s;
+  }
+  .opcion-btn.incorrecto {
+    background: #f87171 !important;
+    border-color: #dc2626 !important;
+    color: #fff !important;
+    animation: shake-bad 0.4s;
+  }
+  .opcion-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+  @keyframes shake-good {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  @keyframes shake-bad {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  .feedback-banner {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    background: #fff;
+    padding: 14px 30px;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    font-size: 22px;
+    font-weight: 600;
+    transition: transform 0.4s cubic-bezier(.68,-0.55,.27,1.55);
+    pointer-events: none;
+    z-index: 10;
+  }
+  .feedback-banner.show { transform: translateX(-50%) translateY(0); }
+  .feedback-banner.bien { background: #4ade80; color: #fff; }
+  .feedback-banner.mal { background: #f87171; color: #fff; }
+
+  /* ===== RESULTADOS ===== */
+  #screen-resultados {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 16px;
+    background: radial-gradient(circle at center, #fff 0%, #fef3c7 100%);
+  }
+  .estrellas {
+    display: flex;
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .estrella {
+    font-size: 70px;
+    opacity: 0.25;
+    transition: all 0.5s;
+    transform: scale(0);
+  }
+  .estrella.show {
+    opacity: 1;
+    transform: scale(1) rotate(360deg);
+    text-shadow: 0 6px 14px rgba(247,183,51,0.5);
+  }
+  .resultado-titulo {
+    font-size: 44px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ff6b6b 0%, #f7b733 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .resultado-puntos {
+    font-size: 28px;
+    color: #4c1d95;
+    font-weight: 600;
+  }
+  .resultado-msg {
+    font-size: 22px;
+    color: #6b7280;
+    max-width: 500px;
+    margin-bottom: 16px;
+  }
+  .botones-final {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ===== Volver al menú ===== */
+  .btn-volver {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 2px solid #e5e7eb;
+    padding: 10px 18px;
+    font-size: 15px;
+    border-radius: 12px;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .btn-volver:active { transform: scale(0.95); }
+
+  /* Detalles tras seleccionar ficha en aprende */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-content {
+    background: #fff;
+    border-radius: 24px;
+    padding: 28px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    animation: pop-in 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+  }
+  @keyframes pop-in {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .modal-content svg { width: 140px; height: 140px; margin: 0 auto; }
+  .modal-content h3 { font-size: 28px; margin: 12px 0 6px; color: #4c1d95; }
+  .modal-content .descripcion {
+    color: #4b5563;
+    font-size: 16px;
+    margin: 12px 0;
+    line-height: 1.5;
+  }
+  .modal-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .modal-stat {
+    background: #f3f4f6;
+    padding: 10px;
+    border-radius: 12px;
+  }
+  .modal-stat .num {
+    font-size: 26px;
+    font-weight: 700;
+    color: #ec4899;
+  }
+  .modal-stat .lbl {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  /* Confeti animación */
+  .confeti {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Responsive ajustes para tablets pequeñas */
+  @media (max-width: 700px) {
+    .menu-cards { grid-template-columns: 1fr; }
+    .opciones.cols-2 { grid-template-columns: 1fr; }
+    .pregunta-figura { width: 150px; height: 150px; }
+    .pregunta-texto { font-size: 22px; }
+    .opcion-btn { font-size: 18px; padding: 16px; }
+    .titulo-mega { font-size: 38px; }
+  }
+  @media (max-height: 600px) {
+    .figuras-deco svg { width: 50px; height: 50px; }
+    .pregunta-figura { width: 130px; height: 130px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ PANTALLA INICIO ============ -->
+  <section class="screen active" id="screen-inicio">
+    <div class="figuras-deco">
+      <svg viewBox="0 0 100 100"><use href="#fig-cubo"/></svg>
+      <svg viewBox="0 0 100 100"><use href="#fig-piramide"/></svg>
+      <svg viewBox="0 0 100 100"><use href="#fig-esfera"/></svg>
+      <svg viewBox="0 0 100 100"><use href="#fig-cilindro"/></svg>
+      <svg viewBox="0 0 100 100"><use href="#fig-cono"/></svg>
+    </div>
+    <h1 class="titulo-mega">Aventura<br>Geométrica</h1>
+    <p class="subtitulo">🧊 Poliedros y cuerpos redondos · 4.º Primaria</p>
+    <input type="text" class="input-nombre" id="nombre-input" placeholder="Escribe tu nombre..." maxlength="20">
+    <button class="btn btn-primario" onclick="empezar()">¡Empezar! 🚀</button>
+  </section>
+
+  <!-- ============ PANTALLA MENÚ ============ -->
+  <section class="screen" id="screen-menu">
+    <div class="saludo">¡Hola, <span class="nombre-usuario" id="saludo-nombre">explorador</span>! 👋<br>¿Qué quieres hacer?</div>
+    <div class="menu-cards">
+      <div class="menu-card aprende" onclick="irAprende()">
+        <span class="emoji">📚</span>
+        <h3>Aprende</h3>
+        <p>Descubre las figuras y sus secretos</p>
+      </div>
+      <div class="menu-card juega" onclick="irJuego()">
+        <span class="emoji">🎮</span>
+        <h3>¡A jugar!</h3>
+        <p>10 retos para conseguir 3 estrellas</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA APRENDE ============ -->
+  <section class="screen" id="screen-aprende">
+    <div class="topbar">
+      <h2>📚 Las figuras geométricas</h2>
+      <button class="btn-volver" onclick="irMenu()">← Menú</button>
+    </div>
+    <div class="galeria" id="galeria"></div>
+  </section>
+
+  <!-- ============ PANTALLA JUEGO ============ -->
+  <section class="screen" id="screen-juego">
+    <div class="topbar">
+      <h2 id="titulo-reto">Reto 1</h2>
+      <button class="btn-volver" onclick="confirmarSalida()">← Salir</button>
+    </div>
+    <div class="info-juego">
+      <span>Pregunta <span id="num-pregunta">1</span>/10</span>
+      <span class="puntos-display">⭐ <span id="puntos-actual">0</span> pts</span>
+    </div>
+    <div class="progreso-bar"><div class="progreso-fill" id="progreso-fill" style="width:10%"></div></div>
+    <div class="pregunta-box">
+      <div class="pregunta-figura" id="pregunta-figura"></div>
+      <div class="pregunta-texto" id="pregunta-texto"></div>
+      <div class="opciones" id="opciones"></div>
+    </div>
+    <div class="feedback-banner" id="feedback-banner"></div>
+  </section>
+
+  <!-- ============ PANTALLA RESULTADOS ============ -->
+  <section class="screen" id="screen-resultados">
+    <div class="estrellas">
+      <span class="estrella" id="e1">⭐</span>
+      <span class="estrella" id="e2">⭐</span>
+      <span class="estrella" id="e3">⭐</span>
+    </div>
+    <h2 class="resultado-titulo" id="resultado-titulo">¡Genial!</h2>
+    <p class="resultado-puntos" id="resultado-puntos">0 puntos</p>
+    <p class="resultado-msg" id="resultado-msg"></p>
+    <div class="botones-final">
+      <button class="btn btn-secundario btn-pequeño" onclick="irMenu()">🏠 Menú</button>
+      <button class="btn btn-primario btn-pequeño" onclick="irJuego()">🔁 Jugar otra vez</button>
+    </div>
+  </section>
+
+  <!-- ============ MODAL DETALLES ============ -->
+  <div class="modal-overlay" id="modal-overlay" onclick="cerrarModal(event)">
+    <div class="modal-content" id="modal-content"></div>
+  </div>
+
+</div>
+
+<!-- ============ DEFINICIÓN SVG DE LAS FIGURAS ============ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+
+    <!-- CUBO -->
+    <symbol id="fig-cubo" viewBox="0 0 100 100">
+      <!-- cara superior -->
+      <polygon points="20,30 50,15 80,30 50,45" fill="#a78bfa" stroke="#5b21b6" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara frontal -->
+      <polygon points="20,30 50,45 50,85 20,70" fill="#7c3aed" stroke="#5b21b6" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara derecha -->
+      <polygon points="80,30 50,45 50,85 80,70" fill="#6d28d9" stroke="#5b21b6" stroke-width="2" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- PRISMA TRIANGULAR -->
+    <symbol id="fig-prisma-tri" viewBox="0 0 100 100">
+      <!-- base trasera -->
+      <polygon points="35,25 70,35 50,15" fill="#fbbf24" stroke="#92400e" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara lateral izquierda -->
+      <polygon points="35,25 50,15 30,75 15,85" fill="#f59e0b" stroke="#92400e" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara lateral derecha -->
+      <polygon points="50,15 70,35 65,85 30,75" fill="#fcd34d" stroke="#92400e" stroke-width="2" stroke-linejoin="round"/>
+      <!-- base frontal triangular -->
+      <polygon points="15,85 30,75 65,85" fill="#d97706" stroke="#92400e" stroke-width="2" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- PRISMA PENTAGONAL -->
+    <symbol id="fig-prisma-pent" viewBox="0 0 100 100">
+      <!-- base trasera (pentágono) -->
+      <polygon points="40,20 60,20 70,30 55,42 45,42 30,30" fill="#34d399" stroke="#065f46" stroke-width="2" stroke-linejoin="round"/>
+      <!-- conexiones laterales -->
+      <polygon points="40,20 60,20 60,70 40,70" fill="#10b981" stroke="#065f46" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="60,20 70,30 70,80 60,70" fill="#059669" stroke="#065f46" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="40,20 30,30 30,80 40,70" fill="#047857" stroke="#065f46" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="70,30 55,42 55,92 70,80" fill="#065f46" stroke="#022c22" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="55,42 45,42 45,92 55,92" fill="#34d399" stroke="#022c22" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="45,42 30,30 30,80 45,92" fill="#10b981" stroke="#022c22" stroke-width="2" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- PIRÁMIDE CUADRANGULAR -->
+    <symbol id="fig-piramide" viewBox="0 0 100 100">
+      <!-- base trasera -->
+      <polygon points="20,75 80,75 60,85 40,85" fill="#fb7185" stroke="#881337" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara izquierda -->
+      <polygon points="50,15 20,75 40,85" fill="#f43f5e" stroke="#881337" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara frontal -->
+      <polygon points="50,15 40,85 60,85" fill="#e11d48" stroke="#881337" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara derecha -->
+      <polygon points="50,15 60,85 80,75" fill="#be123c" stroke="#881337" stroke-width="2" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- TETRAEDRO (pirámide triangular) -->
+    <symbol id="fig-tetraedro" viewBox="0 0 100 100">
+      <!-- base -->
+      <polygon points="20,80 80,80 50,65" fill="#60a5fa" stroke="#1e3a8a" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara izquierda -->
+      <polygon points="20,80 50,15 50,65" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara derecha -->
+      <polygon points="80,80 50,15 50,65" fill="#2563eb" stroke="#1e3a8a" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cara frontal -->
+      <polygon points="20,80 80,80 50,15" fill="#1d4ed8" stroke="#1e3a8a" stroke-width="2" stroke-linejoin="round" opacity="0"/>
+    </symbol>
+
+    <!-- ESFERA -->
+    <symbol id="fig-esfera" viewBox="0 0 100 100">
+      <defs>
+        <radialGradient id="esfera-grad" cx="35%" cy="35%">
+          <stop offset="0%" stop-color="#fef3c7"/>
+          <stop offset="60%" stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#b45309"/>
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="38" fill="url(#esfera-grad)" stroke="#78350f" stroke-width="2"/>
+      <ellipse cx="50" cy="50" rx="38" ry="10" fill="none" stroke="#78350f" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.5"/>
+    </symbol>
+
+    <!-- CILINDRO -->
+    <symbol id="fig-cilindro" viewBox="0 0 100 100">
+      <!-- cuerpo -->
+      <rect x="25" y="25" width="50" height="55" fill="#fda4af" stroke="#881337" stroke-width="2"/>
+      <!-- base inferior -->
+      <ellipse cx="50" cy="80" rx="25" ry="9" fill="#fb7185" stroke="#881337" stroke-width="2"/>
+      <!-- base superior -->
+      <ellipse cx="50" cy="25" rx="25" ry="9" fill="#fecdd3" stroke="#881337" stroke-width="2"/>
+    </symbol>
+
+    <!-- CONO -->
+    <symbol id="fig-cono" viewBox="0 0 100 100">
+      <!-- cuerpo (triángulo) -->
+      <polygon points="50,15 25,80 75,80" fill="#67e8f9" stroke="#0e7490" stroke-width="2" stroke-linejoin="round"/>
+      <!-- base elíptica -->
+      <ellipse cx="50" cy="80" rx="25" ry="8" fill="#22d3ee" stroke="#0e7490" stroke-width="2"/>
+    </symbol>
+
+  </defs>
+</svg>
+
+<script>
+// ============================================================
+// DATOS DE LAS FIGURAS
+// ============================================================
+const FIGURAS = [
+  {
+    id: 'cubo',
+    nombre: 'Cubo',
+    tipo: 'Prisma',
+    grupo: 'poliedro',
+    svg: 'fig-cubo',
+    caras: 6,
+    vertices: 8,
+    aristas: 12,
+    descripcion: 'Es un prisma especial: todas sus caras son cuadrados iguales. ¡Como un dado!'
+  },
+  {
+    id: 'prisma-tri',
+    nombre: 'Prisma triangular',
+    tipo: 'Prisma',
+    grupo: 'poliedro',
+    svg: 'fig-prisma-tri',
+    caras: 5,
+    vertices: 6,
+    aristas: 9,
+    descripcion: 'Tiene 2 bases triangulares y 3 caras laterales rectangulares.'
+  },
+  {
+    id: 'prisma-pent',
+    nombre: 'Prisma pentagonal',
+    tipo: 'Prisma',
+    grupo: 'poliedro',
+    svg: 'fig-prisma-pent',
+    caras: 7,
+    vertices: 10,
+    aristas: 15,
+    descripcion: 'Tiene 2 bases con forma de pentágono y 5 caras rectangulares.'
+  },
+  {
+    id: 'piramide',
+    nombre: 'Pirámide cuadrangular',
+    tipo: 'Pirámide',
+    grupo: 'poliedro',
+    svg: 'fig-piramide',
+    caras: 5,
+    vertices: 5,
+    aristas: 8,
+    descripcion: 'Tiene una base cuadrada y 4 caras triangulares que se juntan en la cúspide.'
+  },
+  {
+    id: 'tetraedro',
+    nombre: 'Pirámide triangular',
+    tipo: 'Pirámide',
+    grupo: 'poliedro',
+    svg: 'fig-tetraedro',
+    caras: 4,
+    vertices: 4,
+    aristas: 6,
+    descripcion: 'También se llama tetraedro. Todas sus caras son triángulos.'
+  },
+  {
+    id: 'esfera',
+    nombre: 'Esfera',
+    tipo: 'Cuerpo redondo',
+    grupo: 'redondo',
+    svg: 'fig-esfera',
+    caras: 0,
+    vertices: 0,
+    aristas: 0,
+    descripcion: 'No tiene caras planas, ni vértices, ni aristas. ¡Como una pelota!'
+  },
+  {
+    id: 'cilindro',
+    nombre: 'Cilindro',
+    tipo: 'Cuerpo redondo',
+    grupo: 'redondo',
+    svg: 'fig-cilindro',
+    caras: 2,
+    vertices: 0,
+    aristas: 0,
+    descripcion: 'Tiene 2 bases circulares y una superficie curva. ¡Como una lata!'
+  },
+  {
+    id: 'cono',
+    nombre: 'Cono',
+    tipo: 'Cuerpo redondo',
+    grupo: 'redondo',
+    svg: 'fig-cono',
+    caras: 1,
+    vertices: 1,
+    aristas: 0,
+    descripcion: 'Tiene una base circular y termina en un pico (vértice). ¡Como un gorro!'
+  }
+];
+
+// ============================================================
+// ESTADO DEL JUEGO
+// ============================================================
+let estado = {
+  nombre: '',
+  preguntas: [],
+  preguntaActual: 0,
+  puntos: 0,
+  aciertos: 0,
+  bloqueado: false
+};
+
+// ============================================================
+// NAVEGACIÓN ENTRE PANTALLAS
+// ============================================================
+function mostrarPantalla(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function empezar() {
+  const input = document.getElementById('nombre-input');
+  const nombre = input.value.trim() || 'explorador';
+  estado.nombre = nombre;
+  document.getElementById('saludo-nombre').textContent = nombre;
+  irMenu();
+}
+
+function irMenu() {
+  mostrarPantalla('screen-menu');
+}
+
+function irAprende() {
+  construirGaleria();
+  mostrarPantalla('screen-aprende');
+}
+
+function irJuego() {
+  estado.preguntas = generarPreguntas();
+  estado.preguntaActual = 0;
+  estado.puntos = 0;
+  estado.aciertos = 0;
+  mostrarPantalla('screen-juego');
+  mostrarPregunta();
+}
+
+function confirmarSalida() {
+  if (confirm('¿Seguro que quieres salir? Perderás tu progreso.')) {
+    irMenu();
+  }
+}
+
+// ============================================================
+// MODO APRENDE - GALERÍA DE FIGURAS
+// ============================================================
+function construirGaleria() {
+  const galeria = document.getElementById('galeria');
+  galeria.innerHTML = '';
+  FIGURAS.forEach(fig => {
+    const claseTipo = fig.tipo === 'Prisma' ? 't-prisma'
+                    : fig.tipo === 'Pirámide' ? 't-piramide'
+                    : 't-redondo';
+    const claseGrupo = fig.grupo === 'poliedro' ? 'poliedro' : 'redondo';
+    const ficha = document.createElement('div');
+    ficha.className = `ficha ${claseGrupo}`;
+    ficha.onclick = () => abrirModal(fig);
+    ficha.innerHTML = `
+      <svg viewBox="0 0 100 100"><use href="#${fig.svg}"/></svg>
+      <h4>${fig.nombre}</h4>
+      <span class="tipo ${claseTipo}">${fig.tipo}</span>
+      <div class="stats">
+        <b>${fig.caras}</b> caras · <b>${fig.vertices}</b> vértices<br>
+        <b>${fig.aristas}</b> aristas
+      </div>
+    `;
+    galeria.appendChild(ficha);
+  });
+}
+
+function abrirModal(fig) {
+  const modal = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  content.innerHTML = `
+    <svg viewBox="0 0 100 100"><use href="#${fig.svg}"/></svg>
+    <h3>${fig.nombre}</h3>
+    <p class="descripcion">${fig.descripcion}</p>
+    <div class="modal-stats">
+      <div class="modal-stat"><div class="num">${fig.caras}</div><div class="lbl">Caras</div></div>
+      <div class="modal-stat"><div class="num">${fig.vertices}</div><div class="lbl">Vértices</div></div>
+      <div class="modal-stat"><div class="num">${fig.aristas}</div><div class="lbl">Aristas</div></div>
+    </div>
+    <button class="btn btn-morado btn-pequeño" onclick="cerrarModal()">Cerrar ✓</button>
+  `;
+  modal.classList.add('show');
+}
+
+function cerrarModal(event) {
+  if (event && event.target.id !== 'modal-overlay' && !event.target.classList.contains('btn-morado')) return;
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ============================================================
+// GENERADOR DE PREGUNTAS
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generarPreguntas() {
+  const lista = [];
+
+  // RETO 1: Adivina el nombre (3 preguntas)
+  shuffle(FIGURAS).slice(0, 3).forEach(fig => {
+    const otras = shuffle(FIGURAS.filter(f => f.id !== fig.id)).slice(0, 3);
+    const opciones = shuffle([fig.nombre, ...otras.map(f => f.nombre)]);
+    lista.push({
+      reto: 1,
+      tituloReto: 'Reto 1: ¡Adivina el nombre!',
+      figura: fig.svg,
+      pregunta: '¿Cómo se llama esta figura?',
+      opciones: opciones,
+      correcta: fig.nombre
+    });
+  });
+
+  // RETO 2: ¿Poliedro o cuerpo redondo? (2 preguntas)
+  shuffle(FIGURAS).slice(0, 2).forEach(fig => {
+    const correcta = fig.grupo === 'poliedro' ? 'Poliedro' : 'Cuerpo redondo';
+    lista.push({
+      reto: 2,
+      tituloReto: 'Reto 2: ¿Poliedro o redondo?',
+      figura: fig.svg,
+      pregunta: `¿Qué es la figura ${fig.nombre.toLowerCase()}?`,
+      opciones: ['Poliedro', 'Cuerpo redondo'],
+      correcta: correcta
+    });
+  });
+
+  // RETO 3: ¿Prisma o pirámide? (2 preguntas, solo poliedros)
+  shuffle(FIGURAS.filter(f => f.grupo === 'poliedro')).slice(0, 2).forEach(fig => {
+    lista.push({
+      reto: 3,
+      tituloReto: 'Reto 3: ¿Prisma o pirámide?',
+      figura: fig.svg,
+      pregunta: `¿Qué tipo de poliedro es?`,
+      opciones: ['Prisma', 'Pirámide'],
+      correcta: fig.tipo
+    });
+  });
+
+  // RETO 4: Cuenta caras / vértices / aristas (3 preguntas, solo poliedros)
+  const propiedades = ['caras', 'vertices', 'aristas'];
+  shuffle(FIGURAS.filter(f => f.grupo === 'poliedro')).slice(0, 3).forEach((fig, i) => {
+    const prop = propiedades[i];
+    const valor = fig[prop];
+    const distract = new Set([valor]);
+    while (distract.size < 4) {
+      let candidato = valor + (Math.floor(Math.random() * 7) - 3);
+      if (candidato < 0) candidato = valor + Math.floor(Math.random() * 5) + 1;
+      distract.add(candidato);
+    }
+    const opciones = shuffle([...distract]).map(String);
+    const nombreProp = prop === 'caras' ? 'caras' : prop === 'vertices' ? 'vértices' : 'aristas';
+    lista.push({
+      reto: 4,
+      tituloReto: 'Reto 4: ¡A contar!',
+      figura: fig.svg,
+      pregunta: `¿Cuántas ${nombreProp} tiene esta figura (${fig.nombre.toLowerCase()})?`,
+      opciones: opciones,
+      correcta: String(valor)
+    });
+  });
+
+  return lista;
+}
+
+// ============================================================
+// MOSTRAR PREGUNTA
+// ============================================================
+function mostrarPregunta() {
+  const p = estado.preguntas[estado.preguntaActual];
+  if (!p) {
+    finalizarJuego();
+    return;
+  }
+
+  document.getElementById('titulo-reto').textContent = p.tituloReto;
+  document.getElementById('num-pregunta').textContent = estado.preguntaActual + 1;
+  document.getElementById('puntos-actual').textContent = estado.puntos;
+  document.getElementById('progreso-fill').style.width =
+    `${((estado.preguntaActual) / estado.preguntas.length) * 100}%`;
+
+  document.getElementById('pregunta-figura').innerHTML =
+    `<svg viewBox="0 0 100 100" width="100%" height="100%"><use href="#${p.figura}"/></svg>`;
+  document.getElementById('pregunta-texto').textContent = p.pregunta;
+
+  const opcionesDiv = document.getElementById('opciones');
+  opcionesDiv.className = 'opciones ' + (p.opciones.length === 2 ? 'cols-2' : 'cols-2');
+  opcionesDiv.innerHTML = '';
+
+  p.opciones.forEach(op => {
+    const btn = document.createElement('button');
+    btn.className = 'opcion-btn';
+    btn.textContent = op;
+    btn.onclick = () => responder(btn, op, p.correcta);
+    opcionesDiv.appendChild(btn);
+  });
+
+  estado.bloqueado = false;
+}
+
+// ============================================================
+// RESPONDER PREGUNTA
+// ============================================================
+function responder(btn, eleccion, correcta) {
+  if (estado.bloqueado) return;
+  estado.bloqueado = true;
+
+  const todos = document.querySelectorAll('.opcion-btn');
+  todos.forEach(b => b.disabled = true);
+
+  if (eleccion === correcta) {
+    btn.classList.add('correcto');
+    estado.puntos += 10;
+    estado.aciertos++;
+    mostrarFeedback('¡Muy bien! 🎉', 'bien');
+    lanzarConfeti();
+  } else {
+    btn.classList.add('incorrecto');
+    todos.forEach(b => {
+      if (b.textContent === correcta) b.classList.add('correcto');
+    });
+    mostrarFeedback(`La correcta era: ${correcta}`, 'mal');
+  }
+
+  document.getElementById('puntos-actual').textContent = estado.puntos;
+
+  setTimeout(() => {
+    estado.preguntaActual++;
+    mostrarPregunta();
+  }, 1800);
+}
+
+function mostrarFeedback(texto, tipo) {
+  const banner = document.getElementById('feedback-banner');
+  banner.textContent = texto;
+  banner.className = 'feedback-banner show ' + tipo;
+  setTimeout(() => banner.classList.remove('show'), 1600);
+}
+
+// ============================================================
+// CONFETI
+// ============================================================
+function lanzarConfeti() {
+  const colores = ['#fbbf24','#f87171','#4ade80','#60a5fa','#a78bfa','#ec4899'];
+  const app = document.querySelector('.app');
+  for (let i = 0; i < 18; i++) {
+    const c = document.createElement('div');
+    c.className = 'confeti';
+    c.style.background = colores[Math.floor(Math.random() * colores.length)];
+    c.style.left = (40 + Math.random() * 20) + '%';
+    c.style.top = '40%';
+    c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    app.appendChild(c);
+
+    const dx = (Math.random() - 0.5) * 400;
+    const dy = -200 - Math.random() * 200;
+    const rot = Math.random() * 720;
+    c.animate([
+      { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+      { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity: 0 }
+    ], { duration: 1500, easing: 'cubic-bezier(.2,.6,.4,1)' });
+
+    setTimeout(() => c.remove(), 1500);
+  }
+}
+
+// ============================================================
+// FINAL DEL JUEGO
+// ============================================================
+function finalizarJuego() {
+  const total = estado.preguntas.length;
+  const aciertos = estado.aciertos;
+  const porcentaje = aciertos / total;
+
+  let estrellas = 0;
+  if (porcentaje >= 0.9) estrellas = 3;
+  else if (porcentaje >= 0.7) estrellas = 2;
+  else if (porcentaje >= 0.4) estrellas = 1;
+
+  let titulo, msg;
+  if (estrellas === 3) {
+    titulo = `¡Eres un genio, ${estado.nombre}! 🌟`;
+    msg = `${aciertos} de ${total} aciertos. ¡Dominas la geometría!`;
+  } else if (estrellas === 2) {
+    titulo = `¡Muy bien, ${estado.nombre}! 👏`;
+    msg = `${aciertos} de ${total} aciertos. ¡Casi perfecto, sigue así!`;
+  } else if (estrellas === 1) {
+    titulo = `¡Buen intento, ${estado.nombre}! 💪`;
+    msg = `${aciertos} de ${total} aciertos. Repasa las figuras y vuelve a intentarlo.`;
+  } else {
+    titulo = `¡Sigue entrenando, ${estado.nombre}!`;
+    msg = `${aciertos} de ${total} aciertos. Visita el modo "Aprende" para mejorar.`;
+  }
+
+  document.getElementById('resultado-titulo').textContent = titulo;
+  document.getElementById('resultado-puntos').textContent = `${estado.puntos} puntos`;
+  document.getElementById('resultado-msg').textContent = msg;
+
+  // Reset estrellas
+  ['e1','e2','e3'].forEach(id => document.getElementById(id).classList.remove('show'));
+
+  mostrarPantalla('screen-resultados');
+
+  // Animar estrellas con retraso
+  for (let i = 0; i < estrellas; i++) {
+    setTimeout(() => {
+      document.getElementById('e' + (i + 1)).classList.add('show');
+      if (i === estrellas - 1 && estrellas >= 2) lanzarConfeti();
+    }, 400 + i * 400);
+  }
+}
+
+// Permitir ENTER en input nombre
+document.getElementById('nombre-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') empezar();
+});
+</script>
+</body>
+</html>
