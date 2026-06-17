@@ -19,7 +19,7 @@ Corrige automáticamente exámenes a partir de **PDFs escaneados**, usando la vi
 5. Pulsa **Corregir exámenes**.
 
 El resultado incluye:
-- **Resumen del lote**: estadísticas del grupo (media, aprobados/suspensos, nota máx./mín.) y la lista de **nombre + nota** de todos los alumnos, con botón para copiarla.
+- **Resumen del lote**: estadísticas del grupo (media, aprobados/suspensos, nota máx./mín.) y la lista de **nombre + nota** de todos los alumnos, con botón para copiarla. Se puede **ordenar** (por orden de corrección, por nota o por nombre) y los **suspensos quedan marcados** en rojo.
 - **Detalle de notas**: tabla con el **nombre detectado de cada alumno (editable**, por si la IA lo lee mal) y sus marcadores.
 - **Detalle por alumno**: cada pregunta transcrita y marcada como correcta ✓, incorrecta ✗, parcial ◐ o en blanco —.
 
