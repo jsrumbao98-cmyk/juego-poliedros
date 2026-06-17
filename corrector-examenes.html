@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📝 Corrector de Exámenes Tipo Test — con IA</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#6366f1; --accent2:#818cf8;
+    --ok:#22c55e; --okbg:#052e16; --bad:#ef4444; --badbg:#3f0d0d;
+    --blank:#f59e0b; --blankbg:#3a2a06; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#0f172a,#111827 60%,#1e1b4b);
+    color:var(--text); min-height:100vh; line-height:1.5; padding:24px 16px 80px;
+  }
+  .wrap{max-width:960px;margin:0 auto}
+  header{text-align:center;margin-bottom:24px}
+  header h1{font-size:1.9rem;font-weight:800;letter-spacing:-.5px}
+  header p{color:var(--muted);margin-top:6px;font-size:.95rem}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .card h2{font-size:1.05rem;display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .step-num{background:var(--accent);color:#fff;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex:0 0 auto}
+  .hint{color:var(--muted);font-size:.85rem;margin:4px 0 14px}
+  label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px;color:#cbd5e1}
+  input[type=text],input[type=password],input[type=number],textarea,select{
+    width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:10px 12px;font-size:.95rem;font-family:inherit
+  }
+  textarea{resize:vertical;min-height:80px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 3px rgba(99,102,241,.25)}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:130px}
+  .filebox{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;transition:.15s;background:var(--panel2)}
+  .filebox:hover{border-color:var(--accent2);background:#2b3a52}
+  .filebox.has{border-color:var(--ok);border-style:solid}
+  .filebox .big{font-size:1.8rem}
+  .filebox .fn{font-size:.85rem;color:var(--muted);margin-top:6px;word-break:break-all}
+  button{cursor:pointer;border:none;border-radius:10px;font-weight:700;font-size:.92rem;padding:11px 18px;transition:.15s;font-family:inherit}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn-ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--accent2)}
+  button:disabled{opacity:.5;cursor:not-allowed;filter:none}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px}
+  .tab{flex:1;text-align:center;padding:9px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);cursor:pointer;font-size:.88rem;font-weight:600}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .keygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:12px}
+  .keycell{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;align-items:center;gap:6px}
+  .keycell span{font-size:.8rem;color:var(--muted);font-weight:700;flex:0 0 auto}
+  .keycell input{padding:5px 6px;text-align:center;text-transform:uppercase}
+  .status{margin-top:14px;padding:12px 14px;border-radius:10px;font-size:.9rem;display:none}
+  .status.show{display:block}
+  .status.info{background:#1e3a5f;border:1px solid #2563eb;color:#bfdbfe}
+  .status.err{background:var(--badbg);border:1px solid var(--bad);color:#fecaca}
+  .status.ok{background:var(--okbg);border:1px solid var(--ok);color:#bbf7d0}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* ---- resultado ---- */
+  #resultado{display:none}
+  .scorecard{display:flex;flex-wrap:wrap;align-items:center;gap:20px;background:linear-gradient(135deg,#312e81,#1e1b4b);border:1px solid var(--accent);border-radius:var(--radius);padding:22px;margin-bottom:18px}
+  .grade{font-size:3rem;font-weight:800;line-height:1}
+  .grade small{font-size:1rem;color:var(--muted);font-weight:600}
+  .stats{display:flex;gap:18px;flex-wrap:wrap}
+  .stat{text-align:center}
+  .stat b{display:block;font-size:1.5rem}
+  .stat span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .q{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--panel)}
+  .q.ok{border-left:5px solid var(--ok)}
+  .q.bad{border-left:5px solid var(--bad)}
+  .q.blank{border-left:5px solid var(--blank)}
+  .q .qhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .q .qnum{font-weight:800;color:var(--accent2)}
+  .q .badge{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:20px;flex:0 0 auto}
+  .badge.ok{background:var(--okbg);color:#86efac;border:1px solid var(--ok)}
+  .badge.bad{background:var(--badbg);color:#fca5a5;border:1px solid var(--bad)}
+  .badge.blank{background:var(--blankbg);color:#fcd34d;border:1px solid var(--blank)}
+  .q .enun{margin:6px 0 10px;font-weight:600}
+  .opts{display:flex;flex-direction:column;gap:5px}
+  .opt{padding:6px 10px;border-radius:8px;font-size:.9rem;border:1px solid transparent;background:var(--panel2)}
+  .opt.correcta{background:var(--okbg);border-color:var(--ok)}
+  .opt.elegida-mal{background:var(--badbg);border-color:var(--bad)}
+  .opt .tag{font-size:.7rem;font-weight:700;margin-left:8px;opacity:.85}
+  .ansline{font-size:.85rem;color:var(--muted);margin-top:8px}
+  .ansline b{color:var(--text)}
+  .footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:30px}
+  a{color:var(--accent2)}
+  @media print{
+    body{background:#fff;color:#000;padding:0}
+    .no-print{display:none!important}
+    .card,.scorecard,.q{box-shadow:none;border-color:#ccc;background:#fff;color:#000}
+    .scorecard{background:#f1f1f1}
+    .opt{background:#f7f7f7}
+    .opt.correcta{background:#dcfce7}
+    .opt.elegida-mal{background:#fee2e2}
+    .grade,.qnum{color:#000}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📝 Corrector de Exámenes Tipo Test</h1>
+    <p>Sube el examen escaneado y la plantilla de respuestas. La IA lo transcribe, señala aciertos y errores, y calcula la nota.</p>
+  </header>
+
+  <!-- PASO 1: API KEY -->
+  <div class="card no-print">
+    <h2><span class="step-num">1</span> Clave de la API de Claude</h2>
+    <p class="hint">La corrección usa el modelo de visión de Claude. Tu clave se guarda solo en este navegador (localStorage) y se envía directamente a la API de Anthropic. Consíguela en <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>.</p>
+    <label for="apiKey">API key (empieza por sk-ant-…)</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-...">
+  </div>
+
+  <!-- PASO 2: PLANTILLA -->
+  <div class="card no-print">
+    <h2><span class="step-num">2</span> Plantilla de respuestas correctas</h2>
+    <p class="hint">Sube la plantilla corregida (PDF o imagen) y deja que la IA extraiga las respuestas, o escríbelas a mano. Podrás revisarlas y editarlas antes de corregir.</p>
+    <div class="tabs">
+      <div class="tab active" data-tab="subir">📤 Subir plantilla</div>
+      <div class="tab" data-tab="manual">⌨️ Escribir a mano</div>
+    </div>
+
+    <div id="tab-subir">
+      <div class="filebox" id="dropPlantilla">
+        <div class="big">📄</div>
+        <div>Haz clic para subir la plantilla (PDF / JPG / PNG)</div>
+        <div class="fn" id="fnPlantilla"></div>
+      </div>
+      <input type="file" id="filePlantilla" accept="application/pdf,image/*" hidden>
+      <div class="actions">
+        <button class="btn-ghost" id="btnExtraer" disabled>✨ Extraer respuestas con IA</button>
+      </div>
+    </div>
+
+    <div id="tab-manual" style="display:none">
+      <label for="manualKey">Respuestas correctas</label>
+      <textarea id="manualKey" placeholder="Formatos válidos:&#10;1: a, 2: c, 3: b, 4: d&#10;o una por línea:&#10;1 a&#10;2 c&#10;o solo las letras en orden:&#10;a, c, b, d, V, F"></textarea>
+      <div class="actions">
+        <button class="btn-ghost" id="btnParse">Cargar respuestas</button>
+      </div>
+    </div>
+
+    <div id="keyEditor" style="display:none">
+      <label style="margin-top:16px">Clave de respuestas (editable)</label>
+      <div class="keygrid" id="keygrid"></div>
+    </div>
+    <div class="status" id="statusPlantilla"></div>
+  </div>
+
+  <!-- PASO 3: EXAMEN -->
+  <div class="card no-print">
+    <h2><span class="step-num">3</span> Examen del alumno escaneado</h2>
+    <p class="hint">Sube el PDF (o imágenes) del examen ya realizado por el alumno.</p>
+    <div class="filebox" id="dropExamen">
+      <div class="big">🖨️</div>
+      <div>Haz clic para subir el examen escaneado (PDF / JPG / PNG)</div>
+      <div class="fn" id="fnExamen"></div>
+    </div>
+    <input type="file" id="fileExamen" accept="application/pdf,image/*" hidden>
+  </div>
+
+  <!-- PASO 4: CRITERIOS -->
+  <div class="card no-print">
+    <h2><span class="step-num">4</span> Criterios de corrección</h2>
+    <div class="row">
+      <div>
+        <label for="ptAcierto">Puntos por acierto</label>
+        <input type="number" id="ptAcierto" value="1" step="0.1" min="0">
+      </div>
+      <div>
+        <label for="penError">Resta por error</label>
+        <input type="number" id="penError" value="0" step="0.1" min="0">
+      </div>
+      <div>
+        <label for="penBlanco">Resta por blanco</label>
+        <input type="number" id="penBlanco" value="0" step="0.1" min="0">
+      </div>
+      <div>
+        <label for="notaSobre">Nota máxima (sobre)</label>
+        <input type="number" id="notaSobre" value="10" step="0.5" min="1">
+      </div>
+    </div>
+    <div class="actions" style="margin-top:18px">
+      <button class="btn-primary" id="btnCorregir" disabled>🚀 Corregir examen</button>
+    </div>
+    <div class="status" id="statusCorregir"></div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="resultado">
+    <div class="card no-print" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">📊 Resultado de la corrección</h2>
+      <div class="actions" style="margin:0">
+        <button class="btn-ghost" id="btnImprimir">🖨️ Imprimir / Guardar PDF</button>
+        <button class="btn-ghost" id="btnReiniciar">🔄 Corregir otro</button>
+      </div>
+    </div>
+    <div class="scorecard" id="scorecard"></div>
+    <div id="preguntas"></div>
+  </div>
+
+  <div class="footer no-print">
+    Procesamiento con visión de Claude (claude-opus-4-8) · Revisa siempre los resultados: la lectura de escaneos puede contener errores.
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = id => document.getElementById(id);
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-opus-4-8";
+
+// ---------- Estado ----------
+let plantillaImgs = null;   // imágenes base64 de la plantilla subida
+let examenImgs = null;      // imágenes base64 del examen
+let answerKey = [];         // [{numero, correcta}]
+
+// ---------- API key persistente ----------
+$("apiKey").value = localStorage.getItem("claude_api_key") || "";
+$("apiKey").addEventListener("input", e => localStorage.setItem("claude_api_key", e.target.value.trim()));
+
+// ---------- Tabs plantilla ----------
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    const tab=t.dataset.tab;
+    $("tab-subir").style.display = tab==="subir"?"block":"none";
+    $("tab-manual").style.display = tab==="manual"?"block":"none";
+  });
+});
+
+// ---------- Carga de ficheros ----------
+function bindFile(dropId, inputId, fnId, onLoad){
+  $(dropId).addEventListener("click",()=>$(inputId).click());
+  $(inputId).addEventListener("change", async e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    $(fnId).textContent = "⏳ Procesando: "+f.name;
+    $(dropId).classList.add("has");
+    try{
+      const imgs = await fileToImages(f);
+      $(fnId).textContent = "✅ "+f.name+" ("+imgs.length+(imgs.length===1?" página":" páginas")+")";
+      onLoad(imgs);
+    }catch(err){
+      $(fnId).textContent = "❌ Error: "+err.message;
+      $(dropId).classList.remove("has");
+    }
+  });
+}
+
+bindFile("dropPlantilla","filePlantilla","fnPlantilla", imgs=>{
+  plantillaImgs = imgs; $("btnExtraer").disabled=false;
+});
+bindFile("dropExamen","fileExamen","fnExamen", imgs=>{
+  examenImgs = imgs; refreshCorregirBtn();
+});
+
+// ---------- Conversión a imágenes base64 ----------
+async function fileToImages(file){
+  if(file.type==="application/pdf"){
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+    const out=[];
+    for(let i=1;i<=pdf.numPages;i++){
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({scale:2});
+      const canvas=document.createElement("canvas");
+      canvas.width=viewport.width; canvas.height=viewport.height;
+      await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;
+      out.push(canvas.toDataURL("image/jpeg",0.85).split(",")[1]);
+    }
+    return out;
+  } else if(file.type.startsWith("image/")){
+    const dataUrl = await new Promise((res,rej)=>{
+      const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
+    });
+    // re-codificar a jpeg para uniformar
+    const img = await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=dataUrl;});
+    const canvas=document.createElement("canvas");
+    const maxW=2000, scale=Math.min(1,maxW/img.width);
+    canvas.width=img.width*scale; canvas.height=img.height*scale;
+    canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+    return [canvas.toDataURL("image/jpeg",0.85).split(",")[1]];
+  }
+  throw new Error("Formato no admitido");
+}
+
+function imgBlocks(imgs){
+  return imgs.map(b64=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}}));
+}
+
+// ---------- Llamada a Claude ----------
+async function callClaude(content, schema, system){
+  const apiKey = $("apiKey").value.trim();
+  if(!apiKey) throw new Error("Introduce tu API key en el paso 1.");
+  const res = await fetch(ANTHROPIC_URL,{
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({
+      model:MODEL, max_tokens:16000, system,
+      messages:[{role:"user",content}],
+      output_config:{format:{type:"json_schema",schema}}
+    })
+  });
+  if(!res.ok){
+    let msg = res.status+" "+res.statusText;
+    try{const e=await res.json(); if(e.error?.message) msg=e.error.message;}catch(_){}
+    if(res.status===401) msg="API key inválida. Revisa el paso 1.";
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  if(data.stop_reason==="refusal") throw new Error("La IA rechazó la solicitud por motivos de seguridad.");
+  const tb = data.content.find(b=>b.type==="text");
+  if(!tb) throw new Error("Respuesta vacía de la IA.");
+  return JSON.parse(tb.text);
+}
+
+// ---------- Extraer plantilla con IA ----------
+$("btnExtraer").addEventListener("click", async ()=>{
+  if(!plantillaImgs) return;
+  const st=$("statusPlantilla");
+  setStatus(st,"info",'<span class="spinner"></span>Extrayendo respuestas correctas de la plantilla…');
+  $("btnExtraer").disabled=true;
+  try{
+    const schema={
+      type:"object", additionalProperties:false,
+      properties:{
+        respuestas:{type:"array",items:{
+          type:"object",additionalProperties:false,
+          properties:{numero:{type:"integer"},correcta:{type:"string"}},
+          required:["numero","correcta"]
+        }}
+      },
+      required:["respuestas"]
+    };
+    const content=[
+      ...imgBlocks(plantillaImgs),
+      {type:"text",text:"Esta es la PLANTILLA de respuestas correctas de un examen tipo test. Extrae, para cada pregunta, su número y la respuesta correcta marcada o indicada (la letra a/b/c/d, o V/F, etc.). Devuelve la opción de forma breve (solo la letra o V/F), en minúscula salvo V/F."}
+    ];
+    const r = await callClaude(content, schema, "Eres un asistente que transcribe plantillas de corrección de exámenes con precisión.");
+    answerKey = r.respuestas.map(x=>({numero:x.numero, correcta:normaliza(x.correcta)}));
+    answerKey.sort((a,b)=>a.numero-b.numero);
+    renderKeyEditor();
+    setStatus(st,"ok","✅ Se han extraído "+answerKey.length+" respuestas. Revísalas abajo y corrige si hace falta.");
+  }catch(err){
+    setStatus(st,"err","❌ "+err.message);
+  }finally{
+    $("btnExtraer").disabled=false;
+  }
+});
+
+// ---------- Plantilla manual ----------
+$("btnParse").addEventListener("click", ()=>{
+  const st=$("statusPlantilla");
+  const txt=$("manualKey").value.trim();
+  if(!txt){ setStatus(st,"err","Escribe las respuestas primero."); return; }
+  const key=parseKey(txt);
+  if(!key.length){ setStatus(st,"err","No se han podido interpretar las respuestas. Revisa el formato."); return; }
+  answerKey=key;
+  renderKeyEditor();
+  setStatus(st,"ok","✅ Cargadas "+key.length+" respuestas. Edítalas si es necesario.");
+});
+
+function parseKey(txt){
+  const pairs=[];
+  // ¿hay números explícitos?
+  const numRe=/(\d+)\s*[:.\-)]?\s*([a-zA-Z]|verdadero|falso)/g;
+  let m, found=false;
+  while((m=numRe.exec(txt))!==null){ found=true; pairs.push({numero:parseInt(m[1]),correcta:normaliza(m[2])}); }
+  if(found){ pairs.sort((a,b)=>a.numero-b.numero); return dedupe(pairs); }
+  // si no, tomar letras sueltas en orden
+  const letters=txt.split(/[\s,;]+/).filter(Boolean);
+  return letters.map((l,i)=>({numero:i+1,correcta:normaliza(l)}));
+}
+function dedupe(arr){const seen={};const out=[];for(const x of arr){if(!seen[x.numero]){seen[x.numero]=1;out.push(x);}}return out;}
+function normaliza(s){
+  if(s==null) return "";
+  s=(""+s).trim().toLowerCase().replace(/[.\)\s]/g,"");
+  if(s==="verdadero") return "v";
+  if(s==="falso") return "f";
+  return s;
+}
+
+function renderKeyEditor(){
+  $("keyEditor").style.display="block";
+  const g=$("keygrid"); g.innerHTML="";
+  answerKey.forEach((k,i)=>{
+    const cell=document.createElement("div");
+    cell.className="keycell";
+    cell.innerHTML=`<span>${k.numero}</span>`;
+    const inp=document.createElement("input");
+    inp.type="text"; inp.value=k.correcta; inp.maxLength=12;
+    inp.addEventListener("input",e=>{answerKey[i].correcta=normaliza(e.target.value);});
+    cell.appendChild(inp);
+    g.appendChild(cell);
+  });
+  refreshCorregirBtn();
+}
+
+function refreshCorregirBtn(){
+  $("btnCorregir").disabled = !(answerKey.length && examenImgs);
+}
+
+// ---------- Corregir examen ----------
+$("btnCorregir").addEventListener("click", async ()=>{
+  const st=$("statusCorregir");
+  setStatus(st,"info",'<span class="spinner"></span>La IA está leyendo y transcribiendo el examen… (puede tardar unos segundos)');
+  $("btnCorregir").disabled=true;
+  try{
+    const schema={
+      type:"object",additionalProperties:false,
+      properties:{
+        alumno:{type:"string"},
+        titulo:{type:"string"},
+        preguntas:{type:"array",items:{
+          type:"object",additionalProperties:false,
+          properties:{
+            numero:{type:"integer"},
+            enunciado:{type:"string"},
+            opciones:{type:"array",items:{
+              type:"object",additionalProperties:false,
+              properties:{letra:{type:"string"},texto:{type:"string"}},
+              required:["letra","texto"]
+            }},
+            respuesta_alumno:{type:"string"}
+          },
+          required:["numero","enunciado","opciones","respuesta_alumno"]
+        }}
+      },
+      required:["alumno","titulo","preguntas"]
+    };
+    const content=[
+      ...imgBlocks(examenImgs),
+      {type:"text",text:
+`Esto es un examen TIPO TEST escaneado y realizado por un alumno. Transcríbelo con fidelidad y, para CADA pregunta, identifica:
+- numero: el número de la pregunta.
+- enunciado: el texto de la pregunta.
+- opciones: lista de opciones con su letra (a, b, c, d…) y su texto. Si la pregunta es Verdadero/Falso usa letras "V" y "F".
+- respuesta_alumno: la opción que el alumno ha marcado/señalado/rodeado/rellenado (solo la letra, en minúscula; usa V o F para verdadero/falso). Si está en blanco o no se distingue, devuelve cadena vacía "".
+Si el nombre del alumno o el título del examen aparecen, inclúyelos; si no, deja cadena vacía. Sé cuidadoso al detectar marcas a mano (cruces, círculos, rayas).`}
+    ];
+    const r = await callClaude(content, schema, "Eres un corrector experto que transcribe exámenes escaneados y detecta con precisión las respuestas marcadas por el alumno.");
+    const resultado = evaluar(r);
+    renderResultado(resultado);
+    setStatus(st,"ok","✅ Corrección completada.");
+  }catch(err){
+    setStatus(st,"err","❌ "+err.message);
+  }finally{
+    $("btnCorregir").disabled=false;
+  }
+});
+
+// ---------- Evaluación (en JS, determinista) ----------
+function evaluar(data){
+  const ptA=parseFloat($("ptAcierto").value)||0;
+  const penE=parseFloat($("penError").value)||0;
+  const penB=parseFloat($("penBlanco").value)||0;
+  const sobre=parseFloat($("notaSobre").value)||10;
+  const keyMap={}; answerKey.forEach(k=>keyMap[k.numero]=k.correcta);
+
+  let aciertos=0,errores=0,blancos=0;
+  const preguntas=data.preguntas.map(q=>{
+    const correcta = keyMap[q.numero] ?? "";
+    const alumno = normaliza(q.respuesta_alumno);
+    let estado;
+    if(!alumno){ estado="blank"; blancos++; }
+    else if(correcta && alumno===correcta){ estado="ok"; aciertos++; }
+    else { estado="bad"; errores++; }
+    return {...q, correcta, alumnoNorm:alumno, estado};
+  });
+
+  const total=preguntas.length;
+  let raw = aciertos*ptA - errores*penE - blancos*penB;
+  if(raw<0) raw=0;
+  const maxRaw = total*ptA;
+  let nota = maxRaw>0 ? (raw/maxRaw)*sobre : 0;
+  nota = Math.round(nota*100)/100;
+
+  return {alumno:data.alumno, titulo:data.titulo, preguntas, aciertos, errores, blancos, total, nota, sobre};
+}
+
+// ---------- Render resultado ----------
+function renderResultado(r){
+  $("resultado").style.display="block";
+  const aprob = r.nota >= r.sobre/2;
+  $("scorecard").innerHTML=`
+    <div>
+      <div class="grade" style="color:${aprob?'#4ade80':'#f87171'}">${r.nota}<small> / ${r.sobre}</small></div>
+      ${r.alumno?`<div style="margin-top:6px;font-weight:700">${esc(r.alumno)}</div>`:""}
+      ${r.titulo?`<div style="color:var(--muted);font-size:.85rem">${esc(r.titulo)}</div>`:""}
+    </div>
+    <div class="stats">
+      <div class="stat"><b style="color:#4ade80">${r.aciertos}</b><span>Aciertos</span></div>
+      <div class="stat"><b style="color:#f87171">${r.errores}</b><span>Errores</span></div>
+      <div class="stat"><b style="color:#fbbf24">${r.blancos}</b><span>En blanco</span></div>
+      <div class="stat"><b>${r.total}</b><span>Total</span></div>
+    </div>`;
+
+  const cont=$("preguntas"); cont.innerHTML="";
+  r.preguntas.forEach(q=>{
+    const div=document.createElement("div");
+    div.className="q "+q.estado;
+    const badge = q.estado==="ok"?'<span class="badge ok">✓ CORRECTA</span>'
+               : q.estado==="bad"?'<span class="badge bad">✗ INCORRECTA</span>'
+               : '<span class="badge blank">— EN BLANCO</span>';
+    let optsHtml="";
+    (q.opciones||[]).forEach(o=>{
+      const l=normaliza(o.letra);
+      let cls="opt", tag="";
+      if(l && l===q.correcta){ cls+=" correcta"; tag='<span class="tag">✓ correcta</span>'; }
+      if(l && l===q.alumnoNorm && q.estado==="bad"){ cls+=" elegida-mal"; tag='<span class="tag">✗ marcada</span>'; }
+      else if(l && l===q.alumnoNorm && q.estado==="ok"){ tag='<span class="tag">marcada</span>'; }
+      optsHtml+=`<div class="${cls}"><b>${esc(o.letra)})</b> ${esc(o.texto)}${tag}</div>`;
+    });
+    div.innerHTML=`
+      <div class="qhead"><div class="qnum">Pregunta ${q.numero}</div>${badge}</div>
+      <div class="enun">${esc(q.enunciado)}</div>
+      <div class="opts">${optsHtml}</div>
+      <div class="ansline">Respuesta del alumno: <b>${q.alumnoNorm?esc(q.alumnoNorm.toUpperCase()):"—"}</b> · Correcta: <b>${q.correcta?esc(q.correcta.toUpperCase()):"(sin clave)"}</b></div>`;
+    cont.appendChild(div);
+  });
+  $("resultado").scrollIntoView({behavior:"smooth"});
+}
+
+// ---------- Utilidades ----------
+function setStatus(el,type,html){ el.className="status show "+type; el.innerHTML=html; }
+function esc(s){ return (s==null?"":(""+s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+$("btnImprimir").addEventListener("click",()=>window.print());
+$("btnReiniciar").addEventListener("click",()=>{
+  examenImgs=null; $("fnExamen").textContent=""; $("dropExamen").classList.remove("has");
+  $("resultado").style.display="none";
+  $("statusCorregir").className="status";
+  refreshCorregirBtn();
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+</script>
+</body>
+</html>
