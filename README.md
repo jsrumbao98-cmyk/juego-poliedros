@@ -15,7 +15,7 @@ Corrige automáticamente exámenes a partir de **PDFs escaneados**, usando la vi
    - **Desarrollo**: defines la respuesta modelo / criterios; la IA valora la respuesta del alumno y otorga puntos parciales con una justificación.
    Cada pregunta tiene su propia puntuación (editable).
 3. **Exámenes**: sube uno o varios archivos. Cada archivo (PDF o imagen) es el examen de un alumno; se corrigen en lote.
-4. **Puntuación global**: resta por error (test) o por blanco, y nota máxima. La nota = (puntos obtenidos ÷ puntos totales) × nota máxima.
+4. **Puntuación global**: resta por error (test) o por blanco, nota máxima y **nota mínima para aprobar** (configurable; por defecto la mitad de la nota máxima). La nota = (puntos obtenidos ÷ puntos totales) × nota máxima.
 5. Pulsa **Corregir exámenes**.
 
 El resultado incluye:

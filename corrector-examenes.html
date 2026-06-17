@@ -216,6 +216,10 @@
         <label for="notaSobre">Nota máxima (sobre)</label>
         <input type="number" id="notaSobre" value="10" step="0.5" min="1">
       </div>
+      <div>
+        <label for="umbralAprob">Nota mínima para aprobar</label>
+        <input type="number" id="umbralAprob" value="5" step="0.1" min="0">
+      </div>
     </div>
     <p class="hint" style="margin-top:10px">La nota se calcula como (puntos obtenidos ÷ puntos totales) × nota máxima. Los puntos de cada pregunta se definen en el paso 2.</p>
     <div class="actions" style="margin-top:8px">
@@ -575,8 +579,14 @@ function evaluar(data, fileName){
 
 // ---------- Render resultados ----------
 function nombreDe(r){ return (r.alumno&&r.alumno.trim())?r.alumno.trim():r.fileName; }
-function colorNota(n,sobre){ return n>=sobre/2?'#4ade80':'#f87171'; }
-function esSuspenso(r){ return r.nota < r.sobre/2; }
+function umbralAprobado(){ const v=parseFloat($("umbralAprob").value); return isNaN(v)?(parseFloat($("notaSobre").value)||10)/2:v; }
+function colorNota(n,sobre){ return n>=umbralAprobado()?'#4ade80':'#f87171'; }
+function esSuspenso(r){ return r.nota < umbralAprobado(); }
+
+// el umbral sigue a la mitad de la nota máxima hasta que se edita a mano
+let umbralTocado=false;
+$("umbralAprob").addEventListener("input",()=>{umbralTocado=true;});
+$("notaSobre").addEventListener("input",()=>{ if(!umbralTocado) $("umbralAprob").value = (parseFloat($("notaSobre").value)||10)/2; });
 
 // índices de resultados[] en el orden elegido en el selector
 function ordenIndices(){
@@ -659,6 +669,8 @@ function actualizarNombre(i){
 
 // reordenar el resumen al cambiar el selector
 $("ordenLote").addEventListener("change",()=>{ if(resultados.length) renderResultados(); });
+// recalcular aprobados/suspensos si se cambia el umbral tras corregir
+$("umbralAprob").addEventListener("change",()=>{ if(resultados.length) renderResultados(); });
 
 // copiar nombres y notas al portapapeles
 $("btnCopiar").addEventListener("click",()=>{
