@@ -75,6 +75,17 @@
   table.summary th,table.summary td{border:1px solid var(--line);padding:8px 10px;text-align:left}
   table.summary th{background:var(--panel2);font-size:.78rem;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
   table.summary td.nota{font-weight:800}
+  table.summary input.nm{width:100%;padding:5px 8px;font-size:.86rem;background:transparent;border:1px solid transparent;border-radius:6px}
+  table.summary input.nm:hover{border-color:var(--line)}
+  table.summary input.nm:focus{background:var(--panel2);border-color:var(--accent2)}
+  .stats{display:flex;gap:18px;flex-wrap:wrap;margin:4px 0 14px}
+  .stat{text-align:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:88px}
+  .stat b{display:block;font-size:1.4rem}
+  .stat span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  ol.lote-lista{margin:0;padding-left:26px;columns:2;column-gap:28px}
+  ol.lote-lista li{margin-bottom:6px;break-inside:avoid;padding-right:8px}
+  ol.lote-lista .nota{font-weight:800;float:right}
+  @media(max-width:640px){ol.lote-lista{columns:1}}
   .examblock{border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
   .examblock>summary{cursor:pointer;list-style:none;padding:14px 16px;background:var(--panel2);display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
   .examblock>summary::-webkit-details-marker{display:none}
@@ -219,8 +230,15 @@
         <button class="btn-ghost" id="btnReiniciar">🔄 Empezar de nuevo</button>
       </div>
     </div>
+    <div class="card" id="loteCard">
+      <h2>📋 Resumen del lote</h2>
+      <div id="loteStats" class="stats"></div>
+      <ol id="loteLista" class="lote-lista"></ol>
+      <div class="actions no-print"><button class="btn-ghost btn-sm" id="btnCopiar">📋 Copiar nombres y notas</button></div>
+    </div>
     <div class="card">
-      <h2>Resumen de notas</h2>
+      <h2>Detalle de notas</h2>
+      <p class="hint no-print">Puedes corregir el nombre detectado escribiendo en cada celda; los cambios se reflejan en el resumen, la copia y el CSV.</p>
       <div style="overflow-x:auto"><table class="summary" id="summaryTable"></table></div>
     </div>
     <div id="detalles"></div>
@@ -492,7 +510,9 @@ Para CADA pregunta devuelve:
 - respuesta_alumno: si es test, SOLO la letra marcada por el alumno (minúscula, o V/F); si no marcó nada o no se distingue, "". Si es desarrollo, transcribe el texto escrito por el alumno (o "" si está en blanco).
 - puntos_otorgados: SOLO para desarrollo, los puntos que merece la respuesta (de 0 al máximo indicado) según los criterios; para test pon 0 (se calcula aparte).
 - comentario: para desarrollo, una breve justificación de la puntuación; para test puedes dejar "".
-Detecta con cuidado las marcas a mano (cruces, círculos, rellenos). Si aparece el nombre del alumno o el título, inclúyelos; si no, deja "".`}];
+Detecta con cuidado las marcas a mano (cruces, círculos, rellenos).
+- alumno: busca el nombre del alumno con atención. Suele estar en la cabecera junto a etiquetas como "Nombre", "Nombre y apellidos", "Alumno/a", "Estudiante" o en una línea para rellenar arriba del examen. Transcríbelo tal cual (nombre y apellidos), incluso si está manuscrito. Si de verdad no aparece, deja "".
+- titulo: el título o asignatura del examen si aparece; si no, "".`}];
   return await callClaude(content,schema,"Eres un corrector experto que transcribe exámenes escaneados, detecta respuestas marcadas y valora respuestas de desarrollo con criterio justo.");
 }
 
@@ -539,36 +559,81 @@ function evaluar(data, fileName){
 }
 
 // ---------- Render resultados ----------
+function nombreDe(r){ return (r.alumno&&r.alumno.trim())?r.alumno.trim():r.fileName; }
+function colorNota(n,sobre){ return n>=sobre/2?'#4ade80':'#f87171'; }
+
 function renderResultados(){
   $("resultado").style.display="block";
-  // tabla resumen
-  const t=$("summaryTable");
-  let head="<tr><th>#</th><th>Alumno / archivo</th><th>Nota</th><th>Aciertos</th><th>Errores</th><th>Parciales</th><th>Blancos</th><th>Puntos</th></tr>";
-  let body="";
-  resultados.forEach((r,i)=>{
-    const aprob=r.nota>=r.sobre/2;
-    body+=`<tr>
-      <td>${i+1}</td>
-      <td>${esc(r.alumno||r.fileName)}${r.alumno?`<br><span style="color:var(--muted);font-size:.78rem">${esc(r.fileName)}</span>`:""}</td>
-      <td class="nota" style="color:${aprob?'#4ade80':'#f87171'}">${r.nota} / ${r.sobre}</td>
-      <td>${r.aciertos}</td><td>${r.errores}</td><td>${r.parciales}</td><td>${r.blancos}</td>
-      <td>${r.obtenidos} / ${r.totales}</td></tr>`;
-  });
-  t.innerHTML=head+body;
 
-  // detalles por alumno
+  // --- resumen del lote: estadísticas ---
+  const sobre = resultados[0]?.sobre || 10;
+  const notas = resultados.map(r=>r.nota);
+  const media = notas.length? Math.round(notas.reduce((a,b)=>a+b,0)/notas.length*100)/100 : 0;
+  const aprobados = notas.filter(n=>n>=sobre/2).length;
+  const maxN = notas.length?Math.max(...notas):0;
+  const minN = notas.length?Math.min(...notas):0;
+  $("loteStats").innerHTML=`
+    <div class="stat"><b>${resultados.length}</b><span>Exámenes</span></div>
+    <div class="stat"><b>${media}</b><span>Media</span></div>
+    <div class="stat"><b style="color:#4ade80">${aprobados}</b><span>Aprobados</span></div>
+    <div class="stat"><b style="color:#f87171">${resultados.length-aprobados}</b><span>Suspensos</span></div>
+    <div class="stat"><b>${maxN}</b><span>Nota máx.</span></div>
+    <div class="stat"><b>${minN}</b><span>Nota mín.</span></div>`;
+
+  // --- resumen del lote: lista nombre + nota ---
+  const ol=$("loteLista"); ol.innerHTML="";
+  resultados.forEach((r,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="nota" style="color:${colorNota(r.nota,r.sobre)}">${r.nota}/${r.sobre}</span><span id="bn-${i}">${esc(nombreDe(r))}</span>`;
+    ol.appendChild(li);
+  });
+
+  // --- tabla detalle (nombre editable) ---
+  const t=$("summaryTable");
+  t.innerHTML="<tr><th>#</th><th>Alumno (editable)</th><th>Archivo</th><th>Nota</th><th>Aciertos</th><th>Errores</th><th>Parciales</th><th>Blancos</th><th>Puntos</th></tr>";
+  resultados.forEach((r,i)=>{
+    const tr=document.createElement("tr");
+    const aprob=r.nota>=r.sobre/2;
+    tr.innerHTML=`<td>${i+1}</td><td></td>
+      <td style="color:var(--muted);font-size:.78rem">${esc(r.fileName)}</td>
+      <td class="nota" style="color:${colorNota(r.nota,r.sobre)}">${r.nota} / ${r.sobre}</td>
+      <td>${r.aciertos}</td><td>${r.errores}</td><td>${r.parciales}</td><td>${r.blancos}</td>
+      <td>${r.obtenidos} / ${r.totales}</td>`;
+    const inp=document.createElement("input"); inp.className="nm"; inp.type="text";
+    inp.value=r.alumno||""; inp.placeholder=r.fileName;
+    inp.oninput=e=>{ r.alumno=e.target.value; actualizarNombre(i); };
+    tr.children[1].appendChild(inp);
+    t.appendChild(tr);
+  });
+
+  // --- detalles por alumno ---
   const d=$("detalles"); d.innerHTML="";
   resultados.forEach((r,idx)=>{
     const det=document.createElement("details"); det.className="examblock"; if(resultados.length===1) det.open=true;
-    const aprob=r.nota>=r.sobre/2;
-    det.innerHTML=`<summary><span>${idx+1}. ${esc(r.alumno||r.fileName)}</span>
-      <span class="gr" style="color:${aprob?'#4ade80':'#f87171'}">${r.nota} / ${r.sobre}</span></summary>`;
+    det.innerHTML=`<summary><span><span id="dn-${idx}">${idx+1}. ${esc(nombreDe(r))}</span></span>
+      <span class="gr" style="color:${colorNota(r.nota,r.sobre)}">${r.nota} / ${r.sobre}</span></summary>`;
     const body=document.createElement("div"); body.className="exambody";
     r.preguntas.forEach(q=>body.appendChild(renderPregunta(q)));
     det.appendChild(body); d.appendChild(det);
   });
   $("resultado").scrollIntoView({behavior:"smooth"});
 }
+
+// actualiza el nombre mostrado al editarlo en la tabla
+function actualizarNombre(i){
+  const nombre=nombreDe(resultados[i]);
+  const bn=$("bn-"+i); if(bn) bn.textContent=nombre;
+  const dn=$("dn-"+i); if(dn) dn.textContent=(i+1)+". "+nombre;
+}
+
+// copiar nombres y notas al portapapeles
+$("btnCopiar").addEventListener("click",()=>{
+  const txt=resultados.map(r=>`${nombreDe(r)}\t${r.nota}/${r.sobre}`).join("\n");
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b=$("btnCopiar"); const o=b.textContent; b.textContent="✅ Copiado";
+    setTimeout(()=>b.textContent=o,1500);
+  }).catch(()=>alert(txt));
+});
 
 function renderPregunta(q){
   const div=document.createElement("div"); div.className="q "+q.estado;
@@ -606,7 +671,7 @@ $("btnCsv").addEventListener("click",()=>{
   const rows=[head];
   resultados.forEach(r=>{
     const byNum={}; r.preguntas.forEach(q=>byNum[q.numero]=q);
-    const cells=[r.alumno,r.fileName,r.nota,r.sobre,r.aciertos,r.errores,r.parciales,r.blancos,r.obtenidos,r.totales];
+    const cells=[nombreDe(r),r.fileName,r.nota,r.sobre,r.aciertos,r.errores,r.parciales,r.blancos,r.obtenidos,r.totales];
     qCols.forEach(k=>{ const q=byNum[k.numero];
       cells.push(q? (q.tipo==="test"? (q.alumnoNorm?q.alumnoNorm.toUpperCase():"-") : q.pts) : "");
     });

@@ -18,7 +18,12 @@ Corrige automáticamente exámenes a partir de **PDFs escaneados**, usando la vi
 4. **Puntuación global**: resta por error (test) o por blanco, y nota máxima. La nota = (puntos obtenidos ÷ puntos totales) × nota máxima.
 5. Pulsa **Corregir exámenes**.
 
-El resultado muestra una **tabla resumen de notas** y el detalle por alumno con cada pregunta transcrita y marcada como correcta ✓, incorrecta ✗, parcial ◐ o en blanco —. Puedes **exportar las notas a CSV** (incluye una columna por pregunta) e **imprimir o guardar como PDF**.
+El resultado incluye:
+- **Resumen del lote**: estadísticas del grupo (media, aprobados/suspensos, nota máx./mín.) y la lista de **nombre + nota** de todos los alumnos, con botón para copiarla.
+- **Detalle de notas**: tabla con el **nombre detectado de cada alumno (editable**, por si la IA lo lee mal) y sus marcadores.
+- **Detalle por alumno**: cada pregunta transcrita y marcada como correcta ✓, incorrecta ✗, parcial ◐ o en blanco —.
+
+La IA detecta automáticamente el nombre del alumno desde la cabecera del examen. Puedes **exportar las notas a CSV** (resumen + una columna por pregunta) e **imprimir o guardar como PDF**.
 
 > Uso: ábrelo directamente en el navegador (`corrector-examenes.html`) o publícalo con GitHub Pages. La clave y los documentos se procesan en tu equipo y se envían directamente a la API de Anthropic; nada se guarda en un servidor propio.
 >
